@@ -11,18 +11,17 @@ import (
 )
 
 var (
-	listenAddress = flag.String("listen", "0.0.0.0:80", "Where the server listens for connections. [interface]:port")
+	listenAddress = flag.String("listen", "0.0.0.0:8888", "Where the server listens for connections. [interface]:port")
 	staticPath    = flag.String("static", "../", "Location of static files.")
 	scriptPath    = flag.String("scripts", "./modules/shell_files", "Location of shell scripts used to gather stats.")
+	noGui         = flag.Bool("nogui", false, "disable the gui (only api)")
 )
 
 func init() {
 	flag.Parse()
 }
 
-func main() {
-	http.Handle("/", http.FileServer(http.Dir(*staticPath)))
-	http.HandleFunc("/server/", func(w http.ResponseWriter, r *http.Request) {
+func apiHandler(w http.ResponseWriter, r *http.Request) {
 		module := r.URL.Query().Get("module")
 		script := filepath.Join(*scriptPath, module+".sh")
 		if module == "" {
@@ -42,8 +41,12 @@ func main() {
 		}
 
 		w.Write(output.Bytes())
-	})
+	}
 
+
+func main() {
+	if(! *noGui) { http.Handle("/", http.FileServer(http.Dir(*staticPath))) }
+	http.HandleFunc("/server/", apiHandler)
 	fmt.Println("Starting http server at:", *listenAddress)
 	err := http.ListenAndServe(*listenAddress, nil)
 	if err != nil {
